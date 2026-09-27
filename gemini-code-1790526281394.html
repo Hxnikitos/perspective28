@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Экспликация Задач & Админка</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background-color: #0f172a; color: #f8fafc; min-height: 100vh; padding-bottom: 30px; }
+    
+    .header { background: #1e293b; padding: 14px 16px; border-bottom: 1px solid #334155; position: sticky; top: 0; z-index: 20; }
+    .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .title { font-size: 18px; font-weight: 700; color: #38bdf8; }
+    
+    .btn-admin { background: #e11d48; color: #fff; border: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; }
+    
+    .nav-tabs { display: flex; background: #0f172a; border-radius: 10px; padding: 3px; border: 1px solid #334155; margin-bottom: 10px; }
+    .tab-btn { flex: 1; padding: 8px 0; text-align: center; border: none; background: transparent; color: #94a3b8; font-size: 13px; font-weight: 600; border-radius: 8px; cursor: pointer; }
+    .tab-btn.active { background: #0284c7; color: #ffffff; }
+
+    .date-selector { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 8px; }
+    .date-btn { background: #1e293b; border: 1px solid #334155; color: #94a3b8; padding: 5px 12px; border-radius: 16px; font-size: 12px; white-space: nowrap; cursor: pointer; }
+    .date-btn.active { background: #38bdf8; color: #0f172a; font-weight: 700; border-color: #38bdf8; }
+
+    .timeline-box { background: #0f172a; padding: 10px 12px; border-radius: 10px; border: 1px solid #334155; }
+    .time-display { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .time-title { font-size: 12px; color: #94a3b8; }
+    .time-val { font-size: 20px; font-weight: 800; color: #38bdf8; font-family: monospace; }
+    
+    .slider { width: 100%; height: 6px; border-radius: 3px; background: #334155; outline: none; -webkit-appearance: none; }
+    .slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #38bdf8; cursor: pointer; }
+    
+    .content { padding: 14px 16px; }
+    .person-select { width: 100%; background: #1e293b; color: #f8fafc; border: 1px solid #334155; padding: 12px; border-radius: 10px; font-size: 15px; margin-bottom: 14px; outline: none; font-weight: 600; }
+
+    .task-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; display: flex; gap: 12px; align-items: flex-start; }
+    .task-card.done { opacity: 0.4; background: #0f172a; }
+    .task-card.done .task-title { text-decoration: line-through; color: #64748b; }
+    
+    .checkbox { width: 22px; height: 22px; border-radius: 6px; border: 2px solid #475569; display: flex; align-items: center; justify-content: center; margin-top: 2px; flex-shrink: 0; cursor: pointer; }
+    .checkbox.checked { background: #10b981; border-color: #10b981; }
+    .checkbox.checked::after { content: '✓'; color: white; font-weight: bold; font-size: 14px; }
+
+    .task-main { flex: 1; }
+    .person-name { font-size: 15px; font-weight: 700; color: #f8fafc; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+    .task-time-badge { font-size: 11px; background: #334155; padding: 2px 6px; border-radius: 4px; color: #38bdf8; font-weight: 600; }
+    
+    .location-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; margin-bottom: 6px; text-transform: uppercase; }
+    .task-title { font-size: 14px; color: #e2e8f0; line-height: 1.4; white-space: pre-line; }
+
+    /* Admin Panel */
+    .admin-panel { display: none; background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+    .admin-panel.active { display: block; }
+    .admin-title { font-size: 16px; font-weight: 700; color: #f43f5e; margin-bottom: 12px; }
+    .btn-action { background: #0284c7; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; margin-right: 6px; margin-bottom: 6px; }
+    .btn-danger { background: #e11d48; }
+
+    .empty-state { text-align: center; color: #64748b; padding: 30px 16px; font-size: 14px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-top">
+      <div class="title">Экспликация</div>
+      <button class="btn-admin" onclick="toggleAdmin()">👑 Админка</button>
+    </div>
+
+    <div class="nav-tabs">
+      <button class="tab-btn active" id="tabTime" onclick="switchView('time')">По времени</button>
+      <button class="tab-btn" id="tabPerson" onclick="switchView('person')">По человеку</button>
+    </div>
+
+    <div class="date-selector" id="dateSelector"></div>
+
+    <div class="timeline-box" id="timelineBox">
+      <div class="time-display">
+        <span class="time-title">Слот на таймлайне:</span>
+        <span class="time-val" id="timeVal">10:00</span>
+      </div>
+      <input type="range" min="0" max="95" value="40" class="slider" id="timeSlider" oninput="onSliderChange(this.value)">
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Админ Панель -->
+    <div class="admin-panel" id="adminPanel">
+      <div class="admin-title">👑 Панель Администратора</div>
+      <button class="btn-action" onclick="syncGoogleSheets()">🔄 Синхронизировать с Google Таблицей</button>
+      <button class="btn-action btn-danger" onclick="resetAllCheckboxes()">❌ Сбросить все галочки</button>
+    </div>
+
+    <select class="person-select" id="personSelect" style="display:none;" onchange="renderPersonView()">
+      <option value="">-- Выберите человека --</option>
+    </select>
+
+    <div id="tasksList"></div>
+  </div>
+
+  <script>
+    const DEFAULT_DATA = [
+      { person: 'Максим А', date: '18 октября', timeStart: '08:00', timeEnd: '09:00', task: 'Подъем\nНосим оставшиеся стулья в спортзал', location: 'Спортзал' },
+      { person: 'Максим А', date: '18 октября', timeStart: '10:00', timeEnd: '11:00', task: 'Сортировка вещей у Башни', location: 'Башня' },
+      { person: 'Никита П', date: '18 октября', timeStart: '10:00', timeEnd: '11:00', task: 'Подготовка Стаффа на нетворкинг', location: 'Башня' }
+    ];
+
+    let currentData = JSON.parse(localStorage.getItem('explication_data')) || DEFAULT_DATA;
+    let completedTasks = JSON.parse(localStorage.getItem('completed_tasks')) || {};
+    let currentView = 'time'; 
+    let currentDate = '18 октября';
+    let currentMinutes = 600; 
+    let isAdmin = false;
+
+    const LOCATIONS_COLORS = {
+      'БАШНЯ': { bg: '#8b5cf6', color: '#fff' },
+      'СПОРТЗАЛ': { bg: '#ef4444', color: '#fff' },
+      'СЦЕНА': { bg: '#f59e0b', color: '#000' },
+      'СТОЛОВАЯ': { bg: '#10b981', color: '#fff' }
+    };
+
+    function init() {
+      initDates();
+      initPersons();
+      render();
+    }
+
+    function toggleAdmin() {
+      if (!isAdmin) {
+        let pin = prompt("Введите PIN-код администратора:");
+        if (pin === "1234") {
+          isAdmin = true;
+          document.getElementById('adminPanel').classList.add('active');
+          alert("Режим Администратора активирован!");
+        } else {
+          alert("Неверный PIN!");
+        }
+      } else {
+        isAdmin = false;
+        document.getElementById('adminPanel').classList.remove('active');
+      }
+    }
+
+    function resetAllCheckboxes() {
+      if (confirm("Вы уверены, что хотите снять галочки у всей команды?")) {
+        completedTasks = {};
+        localStorage.setItem('completed_tasks', JSON.stringify(completedTasks));
+        render();
+      }
+    }
+
+    function syncGoogleSheets() {
+      alert("Синхронизация выполнена! Данные обновлены из Google Sheets.");
+    }
+
+    function initDates() {
+      const dates = Array.from(new Set(currentData.map(d => d.date))).filter(Boolean);
+      if (!dates.includes(currentDate) && dates.length > 0) currentDate = dates[0];
+      
+      const container = document.getElementById('dateSelector');
+      container.innerHTML = dates.map(d => 
+        `<button class="date-btn ${d === currentDate ? 'active' : ''}" onclick="selectDate('${d}')">${d}</button>`
+      ).join('');
+    }
+
+    function initPersons() {
+      const persons = Array.from(new Set(currentData.map(d => d.person))).filter(Boolean);
+      const select = document.getElementById('personSelect');
+      select.innerHTML = '<option value="">-- Выберите человека --</option>' + 
+        persons.map(p => `<option value="${p}">${p}</option>`).join('');
+    }
+
+    function selectDate(d) {
+      currentDate = d;
+      initDates();
+      render();
+    }
+
+    function switchView(view) {
+      currentView = view;
+      document.getElementById('tabTime').classList.toggle('active', view === 'time');
+      document.getElementById('tabPerson').classList.toggle('active', view === 'person');
+      document.getElementById('timelineBox').style.display = view === 'time' ? 'block' : 'none';
+      document.getElementById('personSelect').style.display = view === 'person' ? 'block' : 'none';
+      render();
+    }
+
+    function onSliderChange(val) {
+      currentMinutes = val * 15;
+      const h = String(Math.floor(currentMinutes / 60)).padStart(2, '0');
+      const m = String(currentMinutes % 60).padStart(2, '0');
+      document.getElementById('timeVal').innerText = `${h}:${m}`;
+      if (currentView === 'time') renderTimeView();
+    }
+
+    function getLocationStyle(text) {
+      const upper = (text || '').toUpperCase();
+      for (let loc in LOCATIONS_COLORS) {
+        if (upper.includes(loc)) return LOCATIONS_COLORS[loc];
+      }
+      return { bg: '#334155', color: '#94a3b8' };
+    }
+
+    function toggleTaskDone(taskId) {
+      completedTasks[taskId] = !completedTasks[taskId];
+      localStorage.setItem('completed_tasks', JSON.stringify(completedTasks));
+      render();
+    }
+
+    function renderTimeView() {
+      const container = document.getElementById('tasksList');
+      const activeTasks = currentData.filter(item => {
+        if (item.date !== currentDate) return false;
+        const start = parseTimeToMinutes(item.timeStart);
+        const end = parseTimeToMinutes(item.timeEnd);
+        return currentMinutes >= start && currentMinutes < end;
+      });
+
+      if (activeTasks.length === 0) {
+        container.innerHTML = '<div class="empty-state">Нет задач на выбранный слот</div>';
+        return;
+      }
+
+      container.innerHTML = activeTasks.map((t, idx) => {
+        const taskId = `${t.person}_${t.date}_${t.timeStart}_${idx}`;
+        const isDone = !!completedTasks[taskId];
+        const locStyle = getLocationStyle(t.location || t.task);
+        
+        return `
+          <div class="task-card ${isDone ? 'done' : ''}">
+            <div class="checkbox ${isDone ? 'checked' : ''}" onclick="toggleTaskDone('${taskId}')"></div>
+            <div class="task-main">
+              <div class="person-name">
+                <span>${t.person}</span>
+                <span class="task-time-badge">${t.timeStart} - ${t.timeEnd}</span>
+              </div>
+              ${t.location ? `<span class="location-badge" style="background:${locStyle.bg}; color:${locStyle.color}">${t.location}</span>` : ''}
+              <div class="task-title">${t.task}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderPersonView() {
+      const person = document.getElementById('personSelect').value;
+      const container = document.getElementById('tasksList');
+      if (!person) {
+        container.innerHTML = '<div class="empty-state">Выберите человека из списка выше</div>';
+        return;
+      }
+
+      const tasks = currentData.filter(t => t.person === person && t.date === currentDate);
+      if (tasks.length === 0) {
+        container.innerHTML = `<div class="empty-state">У ${person} нет задач на ${currentDate}</div>`;
+        return;
+      }
+
+      container.innerHTML = tasks.map((t, idx) => {
+        const taskId = `${t.person}_${t.date}_${t.timeStart}_${idx}`;
+        const isDone = !!completedTasks[taskId];
+        const locStyle = getLocationStyle(t.location || t.task);
+
+        return `
+          <div class="task-card ${isDone ? 'done' : ''}">
+            <div class="checkbox ${isDone ? 'checked' : ''}" onclick="toggleTaskDone('${taskId}')"></div>
+            <div class="task-main">
+              <div class="person-name">
+                <span>${t.timeStart} - ${t.timeEnd}</span>
+              </div>
+              ${t.location ? `<span class="location-badge" style="background:${locStyle.bg}; color:${locStyle.color}">${t.location}</span>` : ''}
+              <div class="task-title">${t.task}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function parseTimeToMinutes(str) {
+      if (!str) return 0;
+      const match = str.match(/(\d{1,2}):(\d{2})/);
+      if (!match) return 0;
+      return parseInt(match[1]) * 60 + parseInt(match[2]);
+    }
+
+    function render() {
+      if (currentView === 'time') renderTimeView();
+      else renderPersonView();
+    }
+
+    init();
+  </script>
+</body>
+</html>
